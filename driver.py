@@ -1,18 +1,15 @@
 import os
 import shutil
-import subprocess
 
-in_copy_path = "/home/userfs/l/lcv510/pedestal/ELITE/testcases/circb/circb.in"
-paste_path = "/home/userfs/l/lcv510/pedestal/Results/circb_results"
-eq_copy_path = "/home/userfs/l/lcv510/pedestal/ELITE/testcases/circb/circb.eq"
+copy_path = "/home/userfs/l/lcv510/pedestal/ELITE/testcases/circb/circb"
+paste_path =  "/home/userfs/l/lcv510/pedestal/Results/circb_results"
 
-eliteeq = "~/pedestal/ELITE/ELITE16/equil/eliteeq"
-elitevac = "~/pedestal/ELITE/ELITE16/vac/elitevac"
-elite = "~/pedestal/ELITE/ELITE16/equil/elite"
-
-shutil.copy(in_copy_path, paste_path)
-shutil.copy(eq_copy_path, paste_path)
+eq = "~/pedestal/ELITE/ELITE16/equil/eliteeq"
+vac = "~/pedestal/ELITE/ELITE16/vac/elitevac"
+elite = "~/pedestal/ELITE/ELITE16/symplas/elite"
 
 os.chdir(paste_path)
-os.system("~/pedestal/ELITE/ELITE16/equil/eliteeq")
 
+os.system(eq)
+os.system(vac)
+os.system(elite)
