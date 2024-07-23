@@ -4,6 +4,7 @@
 # This is done by creating a ring of coils, with feedback control setting
 # the poloidal flux to zero at the location of each coil.
 
+#imports
 import freegs
 import numpy as np
 from numpy import exp
@@ -15,13 +16,10 @@ import matplotlib.pyplot as plt
 import shutil
 import os
 
-
-#########################################
-# Create a circular metal wall by using a ring of coils and psi constraints
-
+# main function - runs FreeGS and outputs a geqdsk file
 def main(resolution):
 
-
+	# Miller parameters
 	R0 = 1.0 # Middle of the circle
 	rwall = 0.5  # Radius of the circular wall
 	b = 0 # indentation
@@ -63,43 +61,31 @@ def main(resolution):
 						1e6, # Plasma current [Amps]
 						2.0) # Vacuum f=R*Bt
 
-	# DALIR -- pprime function variables
-
-	a0 = 0.98
-	a1 = 0.01
-	a2 = 110000
-	a3 = 0.1
-	a4 = 0.06
-	c = 0.01
-
-
-	# DALIR -- pprime function
-	def pprime_func(r):
+	# pprime function that works
+	def pprime_func(r, a0=0.98, a1=0.01, a2 = 110000, a3=0.1, a4=0.06):
 		x = (a0 - r) / (2*a1)
 		return (a2 - a4) / 2 * (exp(2*x)*(a3*exp(2*x)+2*a3*x+a3+4)) / (exp(2*x)+1)**2 
 
+	# another pprime function (doesnt work)
 	def pprime_func_long(r):	
 		p = (exp(a0/a1)*((a3*r-(a1+a0)*a3-4*a1)*exp(r/a1)-a1*exp(a0/a1)*a3)) / ( 4*a1**3*(exp(r/a1)+exp(a0/a1))**2 )
 		return p
-
-	def ffprime_func_long(r,a0 = 0.98, a1=0.01, a2=0.01, a3=0.08, a4=-0.5, b=a3, c=0):
+		
+	# ffprime function that mimics MASTU (doesnt work)
+	def ffprime_func_realistic(r,a0 = 0.98, a1=0.01, a2=0.01, a3=0.08, a4=-0.5, b=a3, c=0):
 		x = (a0 - r) / (2 * a1)
 		mtanh = ( (1 + b*x)*exp(x) - (1+c*x)*exp(-x) ) / ( exp(x) + exp(-x) )
 		return -(a2 - a4) / 2 * ( mtanh + 1 ) + a4 +2
-
+		
+	# ffprime function that works
 	def ffprime_func(x):
 		return exp(-6*x+1.8)
-
-
-
-   
-
-	# DALIR -- custom profile with pprime and ffprime
+		
+	# custom profile with pprime and ffprime
 	custom_profile = freegs.jtor.ProfilesPprimeFfprime(pprime_func=pprime_func, ffprime_func=ffprime_func, fvac = 0.2)
 
 	#########################################
 	# Coil current constraints
-	#
 
 	# Same location as the coils
 	psivals = [ (R, Z, 0.0) for R, Z in zip(Rwalls, Zwalls) ]
@@ -113,9 +99,8 @@ def main(resolution):
 		     custom_profile,    # The toroidal current profile function
 		     constrain,   # Constraint function to set coil currents
 		     psi_bndry=0.0,
-		     show=False,
-		     maxits=100)  # Because no X-points, specify the separatrix psi
-
+		     show=False,   # Because no X-points, specify the separatrix psi
+		     maxits=100)  
 
 	#eq now contains the solution
 
@@ -126,7 +111,6 @@ def main(resolution):
 	print("Plasma pressure on 0.3: %e Pascals" % (eq.pressure(0.3)))
 	print("Plasma pressure on 0.5: %e Pascals" % (eq.pressure(0.5)))
 	print("Plasma pressure on 0.9: %e Pascals" % (eq.pressure(0.9)))
-
 
 	##############################################
 	# Save to G-EQDSK file
@@ -146,31 +130,7 @@ def main(resolution):
 	axis = eq.plot(show=False)
 	constrain.plot(axis=axis, show=False)
 
-	import matplotlib.pyplot as plt
-
-	#plt.plot(*eq.q())
-	#plt.xlabel(r"Normalised $\psi$")
-	#plt.ylabel("Safety factor")
-	#plt.suptitle(r"Safety Factor against Polodial Flux ($\psi$)")
-	#plt.show()
-
-	#plt.plot(eq.pressure())
-	#plt.suptitle("pressure")
-	#plt.show()
-
-	# plot the pressure
-	psi = np.linspace(0, 1)
-	pressure = eq.pressure(psi)
-	plt.plot(psi, pressure)
-	plt.xlabel(r"Normalised $\psi$")
-	plt.ylabel("Pressure (Pa)")
-	plt.suptitle(r"Pressure against Polodial Flux ($\psi$)")
-	plt.show()
-
-
-
-
-
+# reader function that reads geqdsk files
 def geqdsk_reader(filename):
 
 	path = f"/home/userfs/l/lcv510/pedestal/ELITE/testcases/{filename}/{filename}.geqdsk"
@@ -178,13 +138,13 @@ def geqdsk_reader(filename):
 	with open(path, "r") as f:
 	    data = geqdsk.read(f)
 
+	# get value of what we want
 	pressure = data["pres"]
 	ffprime = data["ffprime"]
 	pprime = data["pprime"]
 	q = data["qpsi"]
 
-
-
+	# plot
 	plt.plot(np.linspace(0, 1, len(ffprime)), ffprime)
 	plt.suptitle("ffprime against flux")
 	plt.xlabel(r"Normalised flux ($\psi$)")
@@ -210,8 +170,7 @@ def geqdsk_reader(filename):
 	plt.xlabel(r"Normalised flux ($\psi$)")
 	plt.ylabel("Safety factor, q")
 	plt.show()
-
-
+	
 if __name__ == "__main__":
 	x = input("Drive or read? (d/r):") 
 	if x == "r":
@@ -220,5 +179,3 @@ if __name__ == "__main__":
 	else:
 		resolution = int(input("Resolution: (65/257/513) "))
 		main(resolution)
-
-
