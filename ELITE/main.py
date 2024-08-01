@@ -1,3 +1,57 @@
+import os
+import numpy as np
+import shutil
+import matplotlib
+#matplotlib.use("agg")
+import matplotlib.pyplot as plt
+import subprocess
+from pathlib2 import Path
+
+def triangularity_sweep():
+	freegs_path = "/home/userfs/l/lcv510/pedestal/freegs/metal_wall"
+	os.chdir(freegs_path)
+	deltas = [0, 0.3, 0.5,1]
+	for delta in deltas:
+		delta = f"{delta}"
+		print(f"\n \n Running delta {delta}")
+		subprocess.run(["python3", "metal_wall.py", delta])
+		print(f"\n \n Completed delta {delta}")
+
+def triangularity_ELITE_runner():
+	path = "/home/userfs/l/lcv510/pedestal/ELITE/testcases/metal-wall/triangularity_sweep"
+	for folder, subfolder, file in os.walk(path):
+		for name in subfolder:
+			print(f"\n name: {name}")
+			os.chdir(os.path.join(path, name))
+			print(os.getcwd())
+			ELITE_driver(name)
+
+			
+
+
+
+		
+def replacer(filename, new_nn):
+	file = Path(filename)
+
+	filedata = file.read_text()
+
+	nn_target = "nn="
+	nmlow_target = "nmlow="
+	nmvac_target = "nmvac="
+	nmwinhalf_target = "nmwinhalf="
+
+	res1 = filedata.split(nn_target, 1)
+	res2 = filedata.split(nmlow_target, 1)
+	res3 = filedata.split(nmvac_target,1)
+	res4 = filedata.split(nmwinhalf_target, 1)
+
+	nn = int("{}{}".format(res1[1][0], res1[1][1]))
+	nmlow = int("{}{}".format(res2[1][0], res2[1][1]))
+	nmvac = int("{}{}".format(res3[1][0], res3[1][1]))
+	nmwinhalf = int("{}{}".format(res4[1][0], res4[1][1]))
+
+
 	print(nn)
 	print(f"{nmlow:02d}")
 	print(nmvac)
