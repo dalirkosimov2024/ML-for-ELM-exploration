@@ -1,3 +1,5 @@
+
+
 import os
 import numpy as np
 import shutil
@@ -10,7 +12,7 @@ from pathlib2 import Path
 def triangularity_sweep():
 	freegs_path = "/home/userfs/l/lcv510/pedestal/freegs/metal_wall"
 	os.chdir(freegs_path)
-	deltas = [0, 0.3, 0.5,1]
+	deltas = [0]
 	for delta in deltas:
 		delta = f"{delta}"
 		print(f"\n \n Running delta {delta}")
@@ -26,10 +28,7 @@ def triangularity_ELITE_runner():
 			print(os.getcwd())
 			ELITE_driver(name)
 
-			
-
-
-
+		
 		
 def replacer(filename, new_nn):
 	file = Path(filename)
@@ -141,7 +140,7 @@ def extractor(name):
 	mode_number = np.array([])
 	growth_rate = np.array([])
 	
-	base_path = f"/home/userfs/l/lcv510/pedestal/results/outputs/{name}"
+	base_path = f"/home/userfs/l/lcv510/pedestal/results/outputs/delta_sweep/{name}"
 
 	# 3) Enter the subdirectories
 	for folder, subfolder, files in os.walk(base_path):
@@ -164,7 +163,7 @@ def extractor(name):
 
 				# 6) Print values
 				print(f"Mode number: {line_array[9]}")
-				print(f"Mode number: {line_array[10]}")
+				print(f"Growth rate: {line_array[10]}")
 
 				# 7) Append desired values from the line array into
 				#    our initial empty array
@@ -199,8 +198,9 @@ def max_growth_rate_calc():
 
 if __name__ == "__main__":
 
-	triangularity_ELITE_runner()
+	triangularity_sweep()
 
+	
 
 	"""
 	action = input("Drive, Extract or triangularity Sweep? d/e/s ")
