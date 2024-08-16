@@ -1,5 +1,3 @@
-
-
 import os
 import numpy as np
 import shutil
@@ -8,25 +6,44 @@ import matplotlib
 import matplotlib.pyplot as plt
 import subprocess
 from pathlib2 import Path
+import sys
+import csv
+from csv import writer 
 
-def triangularity_sweep():
-	freegs_path = "/home/userfs/l/lcv510/pedestal/freegs/metal_wall"
-	os.chdir(freegs_path)
-	deltas = [0]
-	for delta in deltas:
-		delta = f"{delta}"
-		print(f"\n \n Running delta {delta}")
-		subprocess.run(["python3", "metal_wall.py", delta])
-		print(f"\n \n Completed delta {delta}")
+def runner(delta, kappa, name):
+    freeGS_runner(delta,kappa)
+    ELITE_runner(name)
+    max_gamma = extractor(name)
+    gamma_appender(max_gamma)
 
-def triangularity_ELITE_runner():
-	path = "/home/userfs/l/lcv510/pedestal/ELITE/testcases/metal-wall/triangularity_sweep"
-	for folder, subfolder, file in os.walk(path):
-		for name in subfolder:
-			print(f"\n name: {name}")
-			os.chdir(os.path.join(path, name))
-			print(os.getcwd())
-			ELITE_driver(name)
+
+def gamma_appender(max_gamma):
+    path = "/home/userfs/l/lcv510/pedestal/results/ml-for-elms"
+    with open(f"{path}/y_train.csv","a") as f:
+        f.write("\n")
+        writer_object = writer(f)
+        writer_object.writerow([max_gamma])
+        f.close()
+
+def freeGS_runner(delta, kappa):
+
+    freegs_path = "/home/userfs/l/lcv510/pedestal/freegs/metal_wall"
+    os.chdir(freegs_path)
+    delta = str(delta); kappa = str(kappa)
+    print(f"\n \n Running delta {delta}")
+    subprocess.run(["python3", "metal_wall.py", delta, kappa])
+    print(f"\n \n Completed delta {delta}")
+
+def ELITE_runner(name):
+    name = name.replace('[', '')
+    name = name.replace(']', '')
+    path = "/home/userfs/l/lcv510/pedestal/ELITE/testcases/metal-wall/delta_sweep"
+    new_path = f"{path}/{name}"
+    print(f"\n name: {name}")
+    os.chdir(new_path)
+    print("\n Running ELITE")
+    ELITE(name)
+
 
 		
 		
@@ -75,13 +92,13 @@ def replacer(filename, new_nn):
 	file.write_text(newdata4)
 
 
-def ELITE_driver(name):
+def ELITE(name):
 
 	#name = input("Testcase name: ")
 	#eqin_condition = input("Select file type (eqdsk/eqin/dskbal): ")
 
-	parent_path = "/home/userfs/l/lcv510/pedestal/results/outputs/delta_sweep"
-	base_path = f"/home/userfs/l/lcv510/pedestal/results/outputs/delta_sweep/{name}"
+	parent_path = "/scratch/lcv510/kappa_sweep/data"
+	base_path = f"/{parent_path}/{name}"
 	os.chdir(parent_path)
 	if os.path.exists(base_path):
 		os.chdir(base_path)
@@ -93,13 +110,14 @@ def ELITE_driver(name):
 	vac = f"~/pedestal/ELITE/ELITE16/vac/elitevac -r {name}"
 	elite = f"~/pedestal/ELITE/ELITE16/symplas/elite -r {name} -I 1"
 	
-	nn_list = [10,15,20,25,30,35,40,45]
-
+	nn_list = [5,10,15,20,25,30]
 
 	print(os.getcwd(),"\n")
 
 
 	for nn in nn_list:
+
+		os.system("export OMP_NUM_THREADS=56")
 		
 		os.chdir(base_path)
 		
@@ -109,7 +127,7 @@ def ELITE_driver(name):
 		
 		shutil.copy("/home/userfs/l/lcv510/pedestal/ELITE/testcases/metal-wall/metal-wall.in",f"{new_dir}/{name}.in")
 		
-		shutil.copy(f"/home/userfs/l/lcv510/pedestal/ELITE/testcases/metal-wall/triangularity_sweep/{name}/{name}.eqdsk",new_dir)
+		shutil.copy(f"/scratch/lcv510/kappa_sweep/inputs/{name}/{name}.eqdsk",new_dir)
 	
 		os.chdir(new_dir)
 
@@ -132,89 +150,66 @@ def ELITE_driver(name):
 		print("\n\n\n ----- elite finished ----- \n\n\n")
 
 
-
 def extractor(name):
+    name = name.replace('[', '')
+    name = name.replace(']', '')
 	# 0) Name of testcase
 	
 	# 1) Make empty array list to append to later
-	mode_number = np.array([])
-	growth_rate = np.array([])
-	
-	base_path = f"/home/userfs/l/lcv510/pedestal/results/outputs/delta_sweep/{name}"
+    mode_number = np.array([])
+    growth_rate = np.array([])
+    
+    base_path = f"/scratch/lcv510/kappa_sweep/data/{name}"
 
-	# 3) Enter the subdirectories
-	for folder, subfolder, files in os.walk(base_path):
-		for file in files:
-			
-			# 4) Look for the fole containing the 
-			#    growth rates, in ".gamma" files
-			if file.endswith(".gamma"):
-				file_path = os.path.join(folder,file)
+    # 3) Enter the subdirectories
+    for folder, subfolder, files in os.walk(base_path):
+            for file in files:
+                    
+                    # 4) Look for the fole containing the 
+                    #    growth rates, in ".ghamma" files
+                    if file.endswith(".gamma"):
+                            file_path = os.path.join(folder,file)
 
-				# 5) Open the ".gamma" file, convert the ASCII
-				#    contents into an array and close the file
-				g = open(file_path, "r")
-				line_array = np.array([])
-				for line in g:
-					line = line.strip()
-					columns = np.array(line.split())
-					line_array = np.append(line_array,columns)
-				g.close()
+                            # 5) Open the ".gamma" file, convert the ASCII
+                            #    contents into an array and close the file
+                            g = open(file_path, "r")
+                            line_array = np.array([])
+                            for line in g:
+                                    line = line.strip()
+                                    columns = np.array(line.split())
+                                    line_array = np.append(line_array,columns)
+                            g.close()
 
-				# 6) Print values
-				print(f"Mode number: {line_array[9]}")
-				print(f"Growth rate: {line_array[10]}")
+                            # 6) Print values
+                            print(f"Mode number: {line_array[9]}")
+                            print(f"Growth rate: {line_array[10]}")
 
-				# 7) Append desired values from the line array into
-				#    our initial empty array
-				mode_number = np.append(mode_number, float(line_array[9]))
-				growth_rate = np.append(growth_rate, float(line_array[10]))
+                            # 7) Append desired values from the line array into
+                            #    our initial empty array
+                            mode_number = np.append(mode_number, float(line_array[9]))
+                            growth_rate = np.append(growth_rate, float(line_array[10]))
 
-	print(mode_number)
-	plt.plot(sorted(mode_number), growth_rate[np.argsort(mode_number)], ".")
-	plt.plot(sorted(mode_number), growth_rate[np.argsort(mode_number)], "--", alpha=0.4)
-	plt.xlabel("Toroidal Mode Number, n") ; plt.ylabel("Growth Rate " r"($\gamma$)")
-	plt.title(f"Growth Rate for a given Mode number for the {name} testcase")
-	plt.show()
-	max_growth_rate = np.max(growth_rate)
-	print(f"Max growth rate: {max_growth_rate}")
-	return max_growth_rate
+    print(mode_number)
+    """"
+    plt.plot(sorted(mode_number), growth_rate[np.argsort(mode_number)], ".")
+    plt.plot(sorted(mode_number), growth_rate[np.argsort(mode_number)], "--", alpha=0.4)
+    plt.xlabel("Toroidal Mode Number, n") ; plt.ylabel("Growth Rate " r"($\gamma$)")
+    plt.title(f"Growth Rate for a given Mode number for the {name} testcase")
+    plt.show()
+    max_growth_rate = np.max(growth_rate)
+    print(f"Max growth rate: {max_growth_rate}")
+    """
+    max_growth_rate = np.max(growth_rate)
 
-def max_growth_rate_calc():
-	max_growth_rate_array = np.array([])
-	name_array = np.array([])
-	base_path = "/home/userfs/l/lcv510/pedestal/results/outputs"
-	for folder in os.scandir(base_path):
-		name = input("Tescase name: ")
-		gamma  = extractor(name)
-		max_growth_rate_array = np.append(max_growth_rate_array, gamma)
-		name_array = np.append(name_array, name)
-	print(max_growth_rate_array)
-	print(name_array)
-
-
-
-
+    return max_growth_rate
 
 if __name__ == "__main__":
 
-	triangularity_sweep()
-
-	
-
-	"""
-	action = input("Drive, Extract or triangularity Sweep? d/e/s ")
-	if action == "d":
-		ELITE_driver()
-	elif action=="e":
-		name = input("Testcase name: ")
-		extractor(name)
-	elif action == "s":
-		triangularity_sweep()
-	"""
-		
-
-		
+    kappa =1.2
+    delta_list = [0, 0.2, 0.4, 0.6, 0.8] 
+    for delta in delta_list:
+        name = f"delta_{delta}"
+        runner(delta, kappa, name)
 
 
 
